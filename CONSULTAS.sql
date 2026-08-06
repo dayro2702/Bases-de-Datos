@@ -124,3 +124,44 @@ ON S.id_proveedor = P.id_proveedor
 WHERE S.estado != "Terminado"
 GROUP BY dominio_proveedor, DATE_FORMAT(F.mes_facturacion, "%Y-%m")
 ORDER BY periodo DESC, costo_mensual_total DESC; 
+
+
+/*11. Anomalías de Despliegue Reciente (Filtros Combinados de Fechas y Valores)*/
+SELECT s.id_instancia,
+s.fecha_despliegue,
+f.mes_facturacion,
+f.costo_total
+FROM servidores_instancias s
+INNER JOIN facturacion_mensual f
+ON s.id_instancia = f.id_instancia
+WHERE YEAR(s.fecha_despliegue) = 2026
+AND f.costo_total > 1000
+ORDER BY f.costo_total DESC;
+
+/*12. Densidad de Recursos por Sistema Operativo (Exclusión mediante JOIN)*/
+SELECT s.sistema_operativo,
+COUNT(s.id_instancia) AS total_instancias,
+SUM(s.vcpus) AS total_vcpus,
+SUM(s.memoria_gb) AS total_memoria_RAM
+FROM servidores_instancias s
+WHERE s.estado = "Activo"
+AND s.id_proveedor IS NOT NULL
+GROUP BY s.sistema_operativo 
+ORDER BY total_memoria_RAM DESC;
+
+
+/*13. Consistencia de Facturación (HAVING Avanzado)*/
+SELECT s.id_instancia,
+p.nombre_proveedor,
+COUNT(f.mes_facturacion) AS meses_facturados,
+ROUND(AVG(f.costo_total), 2) AS promedio_mesual
+FROM servidores_instancias s
+LEFT JOIN  facturacion_mensual f 
+ON s.id_instancia = f.id_instancia
+INNER JOIN proveedores_nube p
+ON s.id_proveedor = p.id_proveedor
+GROUP BY s.id_instancia,
+p.nombre_proveedor
+HAVING COUNT(f.mes_facturacion) >= 3
+AND AVG(f.costo_total) > 500
+ORDER BY promedio_mesual DESC;
