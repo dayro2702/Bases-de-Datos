@@ -165,3 +165,42 @@ p.nombre_proveedor
 HAVING COUNT(f.mes_facturacion) >= 3
 AND AVG(f.costo_total) > 500
 ORDER BY promedio_mesual DESC;
+
+/*=================================================================================================
+SUBQUERYS
+=================================================================================================*/
+
+/*Reto 1: Optimización de Hardware (Subconsulta Escalar)*/
+SELECT s.id_instancia,
+s.sistema_operativo,
+s.memoria_gb
+FROM servidores_instancias s 
+WHERE memoria_gb > (
+    SELECT AVG(memoria_gb) 
+    FROM servidores_instancias
+)
+ORDER BY memoria_gb DESC;
+
+/*Reto 2: Proveedores con Alta Disponibilidad (Subconsulta de Lista)*/
+SELECT p.nombre_proveedor,
+p.region_principal
+FROM proveedores_nube P
+WHERE p.id_proveedor IN (  
+    SELECT s.id_proveedor
+    FROM facturacion_mensual f
+    INNER JOIN servidores_instancias s
+    ON s.id_instancia = f.id_instancia
+    WHERE f.horas_uso > 720
+);
+
+/*Reto 3: El Top 3 de Facturación Histórica (Tabla Derivada en el FROM)*/
+SELECT id_instancia,
+costo_total_historico
+FROM (
+    SELECT f.id_instancia,
+    SUM(f.costo_total) AS costo_total_historico
+    FROM facturacion_mensual f
+    GROUP BY f.id_instancia
+) AS resumen_servidores
+ORDER BY costo_total_historico DESC
+LIMIT 3;
