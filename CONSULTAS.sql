@@ -204,3 +204,22 @@ FROM (
 ) AS resumen_servidores
 ORDER BY costo_total_historico DESC
 LIMIT 3;
+
+/*===========================================================================================*/
+
+/*ACTIVIDAD 13 AGOST*/
+SELECT
+    f.id_instancia,
+    f.mes_facturacion,
+    f.costo_total
+FROM facturacion_mensual f 
+INNER JOIN servidores_instancias s
+    ON f.id_instancia = s.id_instancia
+WHERE f.costo_total > (
+    SELECT AVG(costo_total) AS costo_total
+    FROM facturacion_mensual f2
+    INNER JOIN servidores_instancias s2
+        ON f2.id_instancia = s2.id_instancia
+    WHERE s.id_proveedor = s2.id_proveedor
+)
+ORDER BY f.costo_total DESC;
