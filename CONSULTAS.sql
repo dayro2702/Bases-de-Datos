@@ -205,9 +205,9 @@ FROM (
 ORDER BY costo_total_historico DESC
 LIMIT 3;
 
-/*===========================================================================================*/
-
-/*ACTIVIDAD 13 AGOST*/
+/*=================================================================================================
+ACTIVIDAD 13 AGOST
+=================================================================================================*/
 SELECT
     f.id_instancia,
     f.mes_facturacion,
@@ -223,3 +223,64 @@ WHERE f.costo_total > (
     WHERE s.id_proveedor = s2.id_proveedor
 )
 ORDER BY f.costo_total DESC;
+
+/*=================================================================================================
+EJERCICIOS EXPOCICION VISTAS Y VISTAS MATERIALIZADAS
+=================================================================================================*/
+/*EJERCICIO 1*/
+CREATE VIEW v_servidores_activos AS
+SELECT 
+    id_instancia, 
+    sistema_operativo, 
+    vcpus, 
+    memoria_gb, 
+    fecha_despliegue
+FROM servidores_instancias
+WHERE estado = 'Activo';
+
+-- Consulta de uso:
+SELECT * FROM v_servidores_activos;
+
+/*EJERCICIO 2*/
+CREATE VIEW v_detalle_servidor_proveedor AS
+SELECT 
+    s.id_instancia,
+    s.sistema_operativo,
+    s.estado,
+    p.nombre_proveedor,
+    p.region_principal,
+    p.correo_soporte
+FROM servidores_instancias s
+INNER JOIN proveedores_nube p ON s.id_proveedor = p.id_proveedor;
+
+-- Consulta de uso:
+SELECT * FROM v_detalle_servidor_proveedor WHERE region_principal = 'us-west-2';
+
+
+/*VISTAS MATERIALIZADAS*/
+/*EJERCICIO 1*/
+CREATE MATERIALIZED VIEW mv_resumen_costos_instancia AS
+SELECT 
+    id_instancia,
+    COUNT(id_factura) AS total_facturas,
+    SUM(horas_uso) AS total_horas_uso,
+    SUM(costo_total) AS costo_acumulado_usd
+FROM facturacion_mensual
+GROUP BY id_instancia;
+
+-- Para actualizar los datos cuando entren nuevas facturas:
+REFRESH MATERIALIZED VIEW mv_resumen_costos_instancia;
+
+/*EJERCICIO 2*/
+CREATE MATERIALIZED VIEW mv_capacidad_por_proveedor AS
+SELECT 
+    p.nombre_proveedor,
+    COUNT(s.id_instancia) AS total_servidores,A
+    SUM(s.vcpus) AS total_vcpus,
+    SUM(s.memoria_gb) AS total_ram_gb
+FROM proveedores_nube p
+JOIN servidores_instancias s ON p.id_proveedor = s.id_proveedor
+GROUP BY p.nombre_proveedor;
+
+-- Consulta directa al disco (ultra rápida):
+SELECT * FROM mv_capacidad_por_proveedor ORDER BY total_ram_gb DESC;
