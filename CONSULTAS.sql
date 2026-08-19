@@ -286,15 +286,26 @@ La dirección de tecnología requiere un informe de capacidad global para evalua
 Crea una vista materializada llamada mv_capacidad_por_proveedor que cruce la información de los proveedores con sus instancias 
 asignadas y muestre por cada proveedor: el total de servidores contratados, la suma acumulada de vCPUs y el total de memoria RAM 
 (en GB) disponible.*/
-CREATE MATERIALIZED VIEW mv_capacidad_por_proveedor AS
+-- 1. Crear la tabla que almacenará los datos consolidados (reemplaza la vista materializada)
+CREATE TABLE mv_capacidad_por_proveedor (
+    nombre_proveedor VARCHAR(100) PRIMARY KEY,
+    total_servidores INT NOT NULL,
+    total_vcpus INT NOT NULL,
+    total_ram_gb DECIMAL(10, 2) NOT NULL
+);
+
+-- 2. Poblar la tabla con la información actual
+TRUNCATE TABLE mv_capacidad_por_proveedor;
+
+INSERT INTO mv_capacidad_por_proveedor (nombre_proveedor, total_servidores, total_vcpus, total_ram_gb)
 SELECT 
     p.nombre_proveedor,
-    COUNT(s.id_instancia) AS total_servidores,A
+    COUNT(s.id_instancia) AS total_servidores,
     SUM(s.vcpus) AS total_vcpus,
     SUM(s.memoria_gb) AS total_ram_gb
 FROM proveedores_nube p
 JOIN servidores_instancias s ON p.id_proveedor = s.id_proveedor
 GROUP BY p.nombre_proveedor;
 
--- Consulta directa al disco (ultra rápida):
+-- 3. Consulta directa al disco (ultra rápida, idéntica al requerimiento original)
 SELECT * FROM mv_capacidad_por_proveedor ORDER BY total_ram_gb DESC;
