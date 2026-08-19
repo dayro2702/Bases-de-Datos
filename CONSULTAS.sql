@@ -227,7 +227,11 @@ ORDER BY f.costo_total DESC;
 /*=================================================================================================
 EJERCICIOS EXPOCICION VISTAS Y VISTAS MATERIALIZADAS
 =================================================================================================*/
-/*EJERCICIO 1*/
+/*EJERCICIO 1
+Filtro de seguridad y estado operacional:
+El equipo de Operaciones de TI necesita consultar rápidamente la lista de servidores en funcionamiento para tareas de monitoreo diario,
+sin ver equipos fuera de servicio o en mantenimiento. Crea una vista llamada v_servidores_activos que muestre el ID de la instancia, 
+sistema operativo, vCPUs, memoria RAM y fecha de despliegue, filtrando únicamente aquellos registros cuyo estado sea 'Activo'.*/
 CREATE VIEW v_servidores_activos AS
 SELECT 
     id_instancia, 
@@ -241,7 +245,12 @@ WHERE estado = 'Activo';
 -- Consulta de uso:
 SELECT * FROM v_servidores_activos;
 
-/*EJERCICIO 2*/
+/*EJERCICIO 2
+Unificación de información (Servidores y Proveedores):
+Para evitar que el personal técnico escriba sentencias JOIN complejas en sus consultas de rutina, 
+el área de soporte requiere un reporte unificado. Diseña una vista denominada v_detalle_servidor_proveedor que combine los datos de las
+tablas servidores_instancias y proveedores_nube, mostrando el ID de la instancia, sistema operativo, estado, nombre del proveedor, 
+región principal y correo de soporte técnico.*/
 CREATE VIEW v_detalle_servidor_proveedor AS
 SELECT 
     s.id_instancia,
@@ -271,7 +280,12 @@ GROUP BY id_instancia;
 -- Para actualizar los datos cuando entren nuevas facturas:
 REFRESH MATERIALIZED VIEW mv_resumen_costos_instancia;
 
-/*EJERCICIO 2*/
+/*EJERCICIO 2
+Panel ejecutivo de capacidad contratada por Proveedor
+La dirección de tecnología requiere un informe de capacidad global para evaluar la distribución de la infraestructura en la nube. 
+Crea una vista materializada llamada mv_capacidad_por_proveedor que cruce la información de los proveedores con sus instancias 
+asignadas y muestre por cada proveedor: el total de servidores contratados, la suma acumulada de vCPUs y el total de memoria RAM 
+(en GB) disponible.*/
 CREATE MATERIALIZED VIEW mv_capacidad_por_proveedor AS
 SELECT 
     p.nombre_proveedor,
