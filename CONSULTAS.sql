@@ -309,3 +309,151 @@ GROUP BY p.nombre_proveedor;
 
 -- 3. Consulta directa al disco (ultra rápida, idéntica al requerimiento original)
 SELECT * FROM mv_capacidad_por_proveedor ORDER BY total_ram_gb DESC;
+
+/*=================================================================================================
+Procedimiento almacenado
+conjunto de isnstrucciones guardadas en bases de datos para ejecucion reutilizable
+ejemplo microhondas (es manual)
+
+create procedure
+
+pProcedimientos con parametros
+perimiten enviar la informacion para realizar tareas especificas y se puede adaptar
+
+Tiggers
+conjunto de isnstrucciones guardadas en bases de datos para ejecucion de eventos en una tabla (es automatico)
+=================================================================================================
+*/
+CREATE TABLE clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE
+);
+
+CREATE TABLE productos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    precio DECIMAL(10, 2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE pedidos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT,
+    producto_id INT,
+    cantidad INT,
+    total DECIMAL(10, 2),
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+  FOREIGN KEY (producto_id) REFERENCES productos(id)
+);
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_InsertarCliente(
+  IN p_nombre VARCHAR(100),
+  IN p_email VARCHAR(100)
+)
+BEGIN
+  INSERT INTO clientes(nombre, email) VALUES (p_nombre, p_email);
+END$$
+
+CREATE PROCEDURE sp_ConsultarStock(
+  IN p_producto_id INT,
+  OUT p_stock INT
+)
+BEGIN
+  SELECT stock INTO p_stock
+  FROM productos
+  WHERE id = p_producto_id;
+END$$
+
+CREATE PROCEDURE sp_RegistrarPedido(
+  IN p_cliente_id INT,
+  IN p_producto_id INT,
+  IN p_cantidad INT
+)
+BEGIN
+  DECLARE v_precio DECIMAL(10,2);
+  DECLARE v_stock INT;
+  DECLARE v_total DECIMAL(10,2);
+
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    SELECT 'Error al registrar el pedido' AS mensaje;
+  END;
+
+  START TRANSACTION;
+
+  SELECT precio, stock INTO v_precio, v_stock
+  FROM productos
+  WHERE id = p_producto_id
+  FOR UPDATE;
+
+  IF v_stock >= p_cantidad THEN
+    SET v_total = v_precio * p_cantidad;
+
+    INSERT INTO pedidos(cliente_id, producto_id, cantidad, total)
+    VALUES (p_cliente_id, p_producto_id, p_cantidad, v_total);
+
+    UPDATE productos
+    SET stock = stock - p_cantidad
+    WHERE id = p_producto_id;
+
+    COMMIT;
+    SELECT 'Pedido registrado correctamente' AS mensaje;
+  ELSE
+    ROLLBACK;
+    SELECT 'Stock insuficiente' AS mensaje;
+  END IF;
+END$$
+
+CREATE PROCEDURE sp_TotalGastadoPorCliente(
+  IN p_cliente_id INT
+)
+BEGIN
+  SELECT c.nombre, SUM(p.total) AS total_gastado
+  FROM clientes c
+  JOIN pedidos p ON p.cliente_id = c.id
+  WHERE c.id = p_cliente_id
+  GROUP BY c.nombre;
+END$$
+
+DELIMITER ;
+
+INSERT INTO productos (nombre, precio, stock) VALUES
+('Teclado mecanico', 150000, 10),
+('Mouse inalambrico', 60000, 20);
+
+CALL sp_InsertarCliente('Laura Gomez', 'laura@correo.com');
+
+CALL sp_ConsultarStock(1, @stock_actual);
+SELECT @stock_actual;
+
+CALL sp_RegistrarPedido(1, 1, 3);
+
+CALL sp_TotalGastadoPorCliente(1);
+
+/*=================================================================================================
+TRIGERS
+conjunto de isnstrucciones guardadas en bases de datos para ejecucion de eventos en una tabla (es automatico)
+
+Evento-triger-accion
+
+como se activa:
+insert
+update
+delete
+
+Sirve:
+automatizar tareas
+guardar hitorial
+controlar cambios
+validar informacion                 DESVENTAJAS
+ahorrar tiempo                      afecta el rendimiento si se usa demasiado 
+                                    puede aumentar la dificultad
+
+old: informacion anterior
+new: informacion nueva
+=================================================================================================*/
